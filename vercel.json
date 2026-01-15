@@ -13,5 +13,5 @@
     }
   ],
   "installCommand": "npm install",
-  "buildCommand": "npm run build --workspace=@inploy/shared && npm run build --workspace=@inploy/server"
+  "buildCommand": "cd packages/shared && npm run build && cd ../server && npx prisma generate && npm run build"
 }
