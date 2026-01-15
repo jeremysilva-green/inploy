@@ -13,5 +13,5 @@
     }
   ],
   "installCommand": "npm install",
-  "buildCommand": "npm run build --workspace=@inploy/shared && npm run build --workspace=@inploy/server"
+  "buildCommand": "npm run build"
 }
