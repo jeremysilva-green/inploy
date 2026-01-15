@@ -2,14 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "./src",
     "lib": ["ES2022"],
     "paths": {
-      "@inploy/shared": ["../shared/src/index.ts"],
-      "@inploy/shared/*": ["../shared/src/*"]
+      "@inploy/shared": ["../shared/dist/index.d.ts"],
+      "@inploy/shared/*": ["../shared/dist/*"]
     },
     "baseUrl": ".",
     "composite": false
   },
-  "include": ["src/**/*", "../shared/src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "prisma"]
 }

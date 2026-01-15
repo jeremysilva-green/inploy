@@ -40,6 +40,11 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Compiled TypeScript output in src directories
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js.map
+
 # Prisma
 packages/server/prisma/migrations/*
 !packages/server/prisma/migrations/.gitkeep
