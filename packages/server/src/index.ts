@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config/env';
 import { checkDatabaseConnection, disconnectDatabase } from './config/database';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { clerkAuth } from './config/clerk';
 
 // Import routes
 import employersRouter from './routes/employers';
@@ -30,6 +31,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Clerk authentication middleware
+app.use(clerkAuth);
 
 // Rate limiting
 const limiter = rateLimit({
