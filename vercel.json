@@ -1,6 +1,17 @@
 {
-  "buildCommand": "cd packages/shared && npm run build && cd ../server && npm run build",
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.ts"
+    }
+  ],
   "installCommand": "npm install",
-  "framework": null,
-  "outputDirectory": "packages/server/dist"
+  "buildCommand": "npm run build --workspace=@inploy/shared && npm run build --workspace=@inploy/server"
 }
