@@ -1,0 +1,34 @@
+{
+  "name": "@inploy/web",
+  "version": "1.0.0",
+  "description": "InPloy frontend web application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "expo start --web",
+    "build": "expo export:web",
+    "clean": "rm -rf .expo dist web-build",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@clerk/clerk-react": "^4.30.7",
+    "@inploy/shared": "file:../shared",
+    "@tanstack/react-query": "^5.17.19",
+    "date-fns": "^2.30.0",
+    "date-fns-tz": "^2.0.0",
+    "expo": "^54.0.30",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native-web": "~0.19.9",
+    "react-router-dom": "^6.21.3",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.7",
+    "@types/react": "~18.2.45",
+    "@types/react-dom": "~18.2.18",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,253 @@
+// Prisma schema for InPloy database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User mapping to Clerk authentication
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique @map("clerk_id")
+  email     String   @unique
+  role      UserRole @default(EMPLOYER)
+
+  // Optional relation if employer is also a user
+  employer  Employer?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([clerkId])
+  @@index([email])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  EMPLOYER
+}
+
+// Employer entity
+model Employer {
+  id                   String        @id @default(uuid())
+
+  // Basic info
+  firstName            String        @map("first_name")
+  lastName             String        @map("last_name")
+  email                String?       @unique
+  phone                String?
+
+  // Employment details
+  employeeNumber       String?       @unique @map("employee_number")
+  position             String?
+  department           String?
+
+  // Status
+  isActive             Boolean       @default(true) @map("is_active")
+
+  // Salary configuration
+  salaryConfig         SalaryConfig?
+
+  // Working hours baseline (in hours per week)
+  baselineHoursPerWeek Decimal       @default(40) @map("baseline_hours_per_week") @db.Decimal(5,2)
+
+  // Relations
+  userId               String?       @unique @map("user_id")
+  user                 User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  checkIns             CheckIn[]
+  daysOff              DayOff[]
+  dailyWorkSummaries   DailyWorkSummary[]
+
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([email])
+  @@map("employers")
+}
+
+// Salary configuration per employer
+model SalaryConfig {
+  id               String     @id @default(uuid())
+
+  employerId       String     @unique @map("employer_id")
+  employer         Employer   @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+  // Salary type: MONTHLY or HOURLY
+  salaryType       SalaryType @map("salary_type")
+
+  // Amount in base currency (PYG)
+  baseSalaryPYG    Decimal    @map("base_salary_pyg") @db.Decimal(15,2)
+
+  // For hourly employees: hourly rate
+  hourlyRatePYG    Decimal?   @map("hourly_rate_pyg") @db.Decimal(10,2)
+
+  // Deduction formula configuration (flexible JSON for custom formulas)
+  deductionFormula Json       @map("deduction_formula")
+
+  // Currency exchange rate (PYG to USD)
+  exchangeRate     Decimal    @default(7300) @map("exchange_rate") @db.Decimal(10,2)
+
+  // Scheduled start time (hora de entrada pactada) - stored as time string "HH:MM"
+  scheduledStartTime String?   @default("08:00") @map("scheduled_start_time")
+
+  // Lateness tolerance in minutes
+  latenessToleranceMinutes Int @default(15) @map("lateness_tolerance_minutes")
+
+  // Lunch schedule - stored as time strings "HH:MM"
+  scheduledLunchStart String? @default("12:00") @map("scheduled_lunch_start")
+  scheduledLunchEnd   String? @default("13:00") @map("scheduled_lunch_end")
+
+  // Lunch return tolerance in minutes (how late can they return from lunch)
+  lunchReturnToleranceMinutes Int @default(15) @map("lunch_return_tolerance_minutes")
+
+  // Expected work hours configuration
+  expectedHoursPerDay  Decimal @default(8) @map("expected_hours_per_day") @db.Decimal(4,2)
+  expectedDaysPerMonth Int     @default(22) @map("expected_days_per_month")
+
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  @@map("salary_configs")
+}
+
+enum SalaryType {
+  MONTHLY
+  HOURLY
+}
+
+// Check-in/Check-out events
+model CheckIn {
+  id                  String           @id @default(uuid())
+
+  employerId          String           @map("employer_id")
+  employer            Employer         @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+  // Event type
+  eventType           CheckInEventType @map("event_type")
+
+  // Timestamp with timezone info (stored in UTC)
+  timestamp           DateTime         @default(now())
+
+  // Date (for easier querying/grouping by day)
+  date                DateTime         @db.Date
+
+  // For paired events (entrada-salida, almuerzo-return)
+  pairedEventId       String?          @map("paired_event_id")
+
+  // Notes or metadata
+  notes               String?
+
+  // IP address for audit trail
+  ipAddress           String?          @map("ip_address")
+
+  // AI voice greeting played
+  voiceGreetingPlayed Boolean          @default(false) @map("voice_greeting_played")
+
+  createdAt           DateTime         @default(now()) @map("created_at")
+
+  @@index([employerId, date])
+  @@index([employerId, timestamp])
+  @@index([date])
+  @@map("check_ins")
+}
+
+enum CheckInEventType {
+  ENTRADA  // Check in (start work)
+  SALIDA   // Check out (end work)
+  ALMUERZO // Lunch break start
+  RETURN   // Return from lunch
+}
+
+// Days off with salary deductions
+model DayOff {
+  id              String      @id @default(uuid())
+
+  employerId      String      @map("employer_id")
+  employer        Employer    @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+  // Date of day off
+  date            DateTime    @db.Date
+
+  // Type of day off
+  type            DayOffType
+
+  // Is it paid or unpaid
+  isPaid          Boolean     @default(false) @map("is_paid")
+
+  // Deduction amount if unpaid (in PYG)
+  deductionAmount Decimal?    @map("deduction_amount") @db.Decimal(10,2)
+
+  // Reason/notes
+  reason          String?
+
+  // Approved by admin
+  approvedBy      String?     @map("approved_by")
+  approvedAt      DateTime?   @map("approved_at")
+
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@unique([employerId, date])
+  @@index([employerId, date])
+  @@index([date])
+  @@map("days_off")
+}
+
+enum DayOffType {
+  VACATION
+  SICK_LEAVE
+  PERSONAL
+  UNPAID
+  HOLIDAY
+}
+
+// Aggregated daily work summary (for performance optimization)
+model DailyWorkSummary {
+  id               String   @id @default(uuid())
+
+  employerId       String   @map("employer_id")
+  employer         Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  date             DateTime @db.Date
+
+  // Calculated hours
+  totalHoursWorked Decimal  @map("total_hours_worked") @db.Decimal(5,2)
+  lunchHours       Decimal  @map("lunch_hours") @db.Decimal(4,2)
+
+  // Expected hours for that day
+  expectedHours    Decimal  @map("expected_hours") @db.Decimal(5,2)
+
+  // Gained or lost hours
+  hoursGained      Decimal  @map("hours_gained") @db.Decimal(5,2) @default(0)
+  hoursLost        Decimal  @map("hours_lost") @db.Decimal(5,2) @default(0)
+
+  // Salary impact
+  salaryDeduction  Decimal? @map("salary_deduction") @db.Decimal(10,2)
+  salaryBonus      Decimal? @map("salary_bonus") @db.Decimal(10,2)
+
+  // Lateness tracking (entrada)
+  lateMinutes      Int?     @default(0) @map("late_minutes")
+  penaltyMinutes   Int?     @default(0) @map("penalty_minutes")
+  latenessDeduction Decimal? @map("lateness_deduction") @db.Decimal(10,2)
+
+  // Lunch lateness tracking (return from lunch)
+  lunchLateMinutes      Int?     @default(0) @map("lunch_late_minutes")
+  lunchPenaltyMinutes   Int?     @default(0) @map("lunch_penalty_minutes")
+  lunchLatenessDeduction Decimal? @map("lunch_lateness_deduction") @db.Decimal(10,2)
+
+  // Metadata
+  isComplete       Boolean  @default(false) @map("is_complete") // Has SALIDA been recorded
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([employerId, date])
+  @@index([employerId, date])
+  @@index([date])
+  @@map("daily_work_summaries")
+}

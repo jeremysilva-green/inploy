@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: inploy-postgres
+    environment:
+      POSTGRES_USER: inploy
+      POSTGRES_PASSWORD: inploy_password
+      POSTGRES_DB: inploy
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U inploy']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Server
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    container_name: inploy-server
+    environment:
+      DATABASE_URL: postgresql://inploy:inploy_password@postgres:5432/inploy
+      NODE_ENV: development
+      PORT: 3000
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      TZ: America/Asuncion
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../packages/server:/app/packages/server
+      - ../packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/server/node_modules
+      - /app/packages/shared/node_modules
+    command: sh -c "cd packages/server && npx prisma migrate deploy && npm run dev"
+
+  # Frontend Web Application
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    container_name: inploy-web
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+    ports:
+      - '8081:8081'
+    depends_on:
+      - server
+    volumes:
+      - ../packages/web:/app/packages/web
+      - ../packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/web/node_modules
+      - /app/packages/shared/node_modules
+    command: npm run dev -w packages/web
+
+volumes:
+  postgres_data:
