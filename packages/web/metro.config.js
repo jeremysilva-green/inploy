@@ -18,4 +18,12 @@ config.resolver.nodeModulesPaths = [
 // Ensure TypeScript files are resolved
 config.resolver.sourceExts = ['js', 'jsx', 'json', 'ts', 'tsx'];
 
+// Add audio file extensions to asset extensions
+config.resolver.assetExts = [
+  ...config.resolver.assetExts,
+  'mp3',
+  'wav',
+  'ogg',
+];
+
 module.exports = config;

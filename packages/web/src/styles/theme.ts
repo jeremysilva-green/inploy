@@ -1,34 +1,28 @@
 /**
  * Theme configuration and design tokens
- * Modern, bright, minimalist design system
+ * Modern, bright, minimalist design system with dark mode support
  */
 
-export const colors = {
-  // Primary brand colors - Vibrant blue
-  primary: '#3B82F6', // Bright Blue
+// Light mode colors
+export const lightColors = {
+  primary: '#3B82F6',
   primaryDark: '#2563EB',
   primaryLight: '#60A5FA',
   primaryGradient: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
-
-  // Check-in button states - Bright and bold
-  entrada: '#10B981', // Emerald Green
+  entrada: '#10B981',
   entradaHover: '#059669',
   entradaLight: '#D1FAE5',
-  salida: '#F43F5E', // Rose Red
+  salida: '#F43F5E',
   salidaHover: '#E11D48',
   salidaLight: '#FFE4E6',
-  almuerzo: '#F59E0B', // Amber
+  almuerzo: '#F59E0B',
   almuerzoHover: '#D97706',
   almuerzoLight: '#FEF3C7',
-
-  // Accent colors - Bright palette
   purple: '#8B5CF6',
   pink: '#EC4899',
   orange: '#F97316',
   teal: '#14B8A6',
   cyan: '#06B6D4',
-
-  // Neutral colors - Clean whites and grays
   white: '#FFFFFF',
   black: '#09090B',
   gray50: '#FAFAFA',
@@ -41,18 +35,63 @@ export const colors = {
   gray700: '#3F3F46',
   gray800: '#27272A',
   gray900: '#18181B',
-
-  // Status colors
   success: '#10B981',
   error: '#F43F5E',
   warning: '#F59E0B',
   info: '#3B82F6',
-
-  // Background - Very light and airy
   background: '#FAFAFA',
   surface: '#FFFFFF',
   surfaceHover: '#F4F4F5',
+  text: '#18181B',
+  textSecondary: '#52525B',
+  border: '#E4E4E7',
 } as const;
+
+// Dark mode colors
+export const darkColors = {
+  primary: '#60A5FA',
+  primaryDark: '#3B82F6',
+  primaryLight: '#93C5FD',
+  primaryGradient: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
+  entrada: '#34D399',
+  entradaHover: '#10B981',
+  entradaLight: '#064E3B',
+  salida: '#FB7185',
+  salidaHover: '#F43F5E',
+  salidaLight: '#4C0519',
+  almuerzo: '#FBBF24',
+  almuerzoHover: '#F59E0B',
+  almuerzoLight: '#451A03',
+  purple: '#A78BFA',
+  pink: '#F472B6',
+  orange: '#FB923C',
+  teal: '#2DD4BF',
+  cyan: '#22D3EE',
+  white: '#09090B',
+  black: '#FFFFFF',
+  gray50: '#18181B',
+  gray100: '#27272A',
+  gray200: '#3F3F46',
+  gray300: '#52525B',
+  gray400: '#71717A',
+  gray500: '#A1A1AA',
+  gray600: '#D4D4D8',
+  gray700: '#E4E4E7',
+  gray800: '#F4F4F5',
+  gray900: '#FAFAFA',
+  success: '#34D399',
+  error: '#FB7185',
+  warning: '#FBBF24',
+  info: '#60A5FA',
+  background: '#09090B',
+  surface: '#18181B',
+  surfaceHover: '#27272A',
+  text: '#FAFAFA',
+  textSecondary: '#A1A1AA',
+  border: '#3F3F46',
+} as const;
+
+export const colors = lightColors;
 
 export const spacing = {
   xs: 4,
@@ -127,6 +166,8 @@ export const breakpoints = {
   xl: 1280,
 } as const;
 
+export const getThemeColors = (isDark: boolean) => isDark ? darkColors : lightColors;
+
 export const theme = {
   colors,
   spacing,
@@ -139,3 +180,4 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
+export type ThemeColors = typeof lightColors;

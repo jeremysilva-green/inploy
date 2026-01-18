@@ -4,17 +4,22 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { EmployeeManager } from '../components/admin/EmployeeManager';
 import { AdminDashboard } from '../components/admin/AdminDashboard';
 import { DaysOffManagement } from '../components/admin/DaysOffManagement';
 import { KioskDisplay } from '../components/display/KioskDisplay';
 import { FormulaConfig } from '../components/admin/FormulaConfig';
+import { DarkModeToggle } from '../components/common/DarkModeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+import { getThemeColors } from '../styles/theme';
 
 type Screen = 'employees' | 'admin' | 'daysoff' | 'display' | 'formula';
 
 export const AppRouter: React.FC = () => {
   const [currentScreen, setCurrentScreen] = React.useState<Screen>('admin');
+  const { isDark } = useTheme();
+  const colors = getThemeColors(isDark);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -33,16 +38,19 @@ export const AppRouter: React.FC = () => {
     }
   };
 
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       {/* Sidebar */}
       <View style={styles.sidebar}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoIcon}>
-            <Text style={styles.logoEmoji}>▥</Text>
-          </View>
-          <Text style={styles.logoText}>InPloy</Text>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Navigation */}
@@ -53,7 +61,6 @@ export const AppRouter: React.FC = () => {
             style={[styles.navItem, currentScreen === 'admin' && styles.navItemActive]}
             onPress={() => setCurrentScreen('admin')}
           >
-            <Text style={styles.navIcon}>▦</Text>
             <Text style={[styles.navLabel, currentScreen === 'admin' && styles.navLabelActive]}>
               Dashboard
             </Text>
@@ -63,7 +70,6 @@ export const AppRouter: React.FC = () => {
             style={[styles.navItem, currentScreen === 'employees' && styles.navItemActive]}
             onPress={() => setCurrentScreen('employees')}
           >
-            <Text style={styles.navIcon}>👤</Text>
             <Text style={[styles.navLabel, currentScreen === 'employees' && styles.navLabelActive]}>
               Empleados
             </Text>
@@ -73,7 +79,6 @@ export const AppRouter: React.FC = () => {
             style={[styles.navItem, currentScreen === 'daysoff' && styles.navItemActive]}
             onPress={() => setCurrentScreen('daysoff')}
           >
-            <Text style={styles.navIcon}>📅</Text>
             <Text style={[styles.navLabel, currentScreen === 'daysoff' && styles.navLabelActive]}>
               Días Libres
             </Text>
@@ -83,7 +88,6 @@ export const AppRouter: React.FC = () => {
             style={[styles.navItem, currentScreen === 'formula' && styles.navItemActive]}
             onPress={() => setCurrentScreen('formula')}
           >
-            <Text style={styles.navIcon}>🧮</Text>
             <Text style={[styles.navLabel, currentScreen === 'formula' && styles.navLabelActive]}>
               Fórmula
             </Text>
@@ -93,7 +97,6 @@ export const AppRouter: React.FC = () => {
             style={[styles.navItem, currentScreen === 'display' && styles.navItemActive]}
             onPress={() => setCurrentScreen('display')}
           >
-            <Text style={styles.navIcon}>⌚</Text>
             <Text style={[styles.navLabel, currentScreen === 'display' && styles.navLabelActive]}>
               Display
             </Text>
@@ -111,9 +114,7 @@ export const AppRouter: React.FC = () => {
           </View>
 
           <View style={styles.topBarActions}>
-            <TouchableOpacity style={styles.iconBtn}>
-              <Text style={styles.topIcon}>☾</Text>
-            </TouchableOpacity>
+            <DarkModeToggle />
             <TouchableOpacity style={styles.iconBtn}>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>3</Text>
@@ -135,42 +136,32 @@ export const AppRouter: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getThemeColors>) => StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#F7F9FC',
+    backgroundColor: colors.background,
   },
   sidebar: {
     width: 240,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightColor: colors.border,
     paddingVertical: 24,
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     marginBottom: 32,
   },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#6366F1',
+  logoImage: {
+    width: 180,
+    height: 50,
+    backgroundColor: '#FFFFFF',
+    padding: 8,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  logoEmoji: {
-    fontSize: 16,
-  },
-  logoText: {
-    fontFamily: 'Montserrat, sans-serif',
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
   },
   nav: {
     paddingHorizontal: 12,
@@ -178,7 +169,7 @@ const styles = StyleSheet.create({
   navSection: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.textSecondary,
     paddingHorizontal: 12,
     marginBottom: 8,
     letterSpacing: 0.5,
@@ -192,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   navItemActive: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.primaryLight,
   },
   navIcon: {
     fontSize: 18,
@@ -202,10 +193,10 @@ const styles = StyleSheet.create({
   navLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   navLabelActive: {
-    color: '#6366F1',
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   mainContent: {
@@ -215,16 +206,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surfaceHover,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -233,10 +224,11 @@ const styles = StyleSheet.create({
   searchIcon: {
     fontSize: 16,
     marginRight: 8,
+    color: colors.textSecondary,
   },
   searchText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: colors.textSecondary,
   },
   topBarActions: {
     flexDirection: 'row',
@@ -249,17 +241,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surfaceHover,
     position: 'relative',
   },
   topIcon: {
     fontSize: 18,
+    color: colors.text,
   },
   badge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     width: 18,
     height: 18,
     borderRadius: 9,
@@ -270,13 +263,13 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#6366F1',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -284,7 +277,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     fontFamily: 'Montserrat, sans-serif',
   },
   content: {

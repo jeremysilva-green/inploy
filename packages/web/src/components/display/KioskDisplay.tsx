@@ -4,10 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { theme } from '../../styles/theme';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../services/api';
+import { playClickSound, playLunchSound } from '../../utils/soundPlayer';
 
 export const KioskDisplay: React.FC = () => {
   const queryClient = useQueryClient();
@@ -68,6 +69,14 @@ export const KioskDisplay: React.FC = () => {
 
   const handleCheckIn = (employerId: string, employeeName: string, eventType: 'ENTRADA' | 'SALIDA' | 'ALMUERZO' | 'RETURN') => {
     console.log('Check-in button pressed:', { employerId, employeeName, eventType, timestamp: new Date().toISOString() });
+
+    // Play appropriate sound based on button type
+    if (eventType === 'ENTRADA' || eventType === 'SALIDA') {
+      playClickSound();
+    } else if (eventType === 'ALMUERZO' || eventType === 'RETURN') {
+      playLunchSound();
+    }
+
     checkInMutation.mutate({ employerId, employeeName, eventType });
   };
 
@@ -122,7 +131,11 @@ export const KioskDisplay: React.FC = () => {
           <Text style={styles.date}>{formatDate(currentTime)}</Text>
         </View>
         <View style={styles.logoSection}>
-          <Text style={styles.logo}>InPloy</Text>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.subtitle}>Sistema de Control de Asistencia</Text>
         </View>
       </View>
@@ -154,7 +167,6 @@ export const KioskDisplay: React.FC = () => {
                 </View>
                 <View style={styles.employeeDetails}>
                   <Text style={styles.employeeName}>{employee.firstName}</Text>
-                  <Text style={styles.employeePosition}>{employee.position || 'Empleado'}</Text>
                 </View>
               </View>
 
@@ -303,12 +315,13 @@ const styles = StyleSheet.create({
   logoSection: {
     alignItems: 'flex-end',
   },
-  logo: {
-    fontFamily: theme.fonts.heading,
-    fontSize: 36,
-    fontWeight: theme.fontWeight.extrabold as any,
-    color: theme.colors.primary,
+  logoImage: {
+    width: 200,
+    height: 60,
     marginBottom: theme.spacing.xs,
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 8,
   },
   subtitle: {
     fontFamily: theme.fonts.body,

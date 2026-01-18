@@ -254,10 +254,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   title: {
-    fontFamily: theme.fonts.heading,
-    fontSize: theme.fontSize.xxl,
-    fontWeight: theme.fontWeight.extrabold as any,
-    color: theme.colors.gray900,
+    fontFamily: 'Montserrat, sans-serif',
+    fontSize: 16,
+    fontWeight: '600' as '600',
+    color: '#1F2937',
   },
   addButton: {
     backgroundColor: theme.colors.primary,

@@ -2,124 +2,198 @@
  * Modern Admin Dashboard - Premium Design
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../services/api';
 
 export const AdminDashboard: React.FC = () => {
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
   const { data: employees } = useQuery({
     queryKey: ['employers'],
     queryFn: () => apiClient.getEmployers(),
   });
 
-  const { data: todaySummaries } = useQuery({
-    queryKey: ['today-summaries'],
-    queryFn: () => apiClient.getTodaySummaries(),
-    refetchInterval: 10000, // Refresh every 10 seconds
-  });
-
-  // Fetch today's check-ins for all employees
+  // Fetch check-ins for the selected month
   const { data: checkInsData } = useQuery({
-    queryKey: ['check-ins-today'],
-    queryFn: () => apiClient.getCheckIns({
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
-    }),
-    refetchInterval: 10000, // Refresh every 10 seconds
+    queryKey: ['check-ins-month', selectedMonth],
+    queryFn: () => {
+      const [year, month] = selectedMonth.split('-');
+      const startDate = `${year}-${month}-01`;
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+      return apiClient.getCheckIns({
+        startDate,
+        endDate,
+      });
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Group check-ins by date
+  const groupCheckInsByDate = (checkIns: any[]) => {
+    const grouped: Record<string, any[]> = {};
+    checkIns?.forEach((ci: any) => {
+      const date = new Date(ci.timestamp).toISOString().split('T')[0];
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(ci);
+    });
+    return grouped;
+  };
+
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('es-PY', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.toLocaleDateString('es-PY', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+    });
+  };
+
+  const calculateSalary = (baseSalary: number, deduction: number) => {
+    return baseSalary - deduction;
+  };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* Page Title */}
-      <Text style={styles.pageTitle}>Registros</Text>
+      <Text style={styles.pageTitle}>Registros - {selectedMonth}</Text>
 
       {/* Employee List */}
-      <View style={styles.listCard}>
-        {employees?.items?.map((emp: any) => {
-          const summary = todaySummaries?.summaries?.find(
-            (s: any) => s.employerId === emp.id
-          );
-          const lateMinutes = summary?.lateMinutes || 0;
-          const penaltyMinutes = summary?.penaltyMinutes || 0;
-          const deduction = summary?.latenessDeduction || 0;
+      {employees?.items?.map((emp: any) => {
+        const baseSalary = emp.salaryConfig?.baseSalaryPYG || 0;
+        const groupedCheckIns = groupCheckInsByDate(
+          checkInsData?.checkIns?.filter((ci: any) => ci.employerId === emp.id) || []
+        );
+        const dates = Object.keys(groupedCheckIns).sort().reverse(); // Most recent first
 
-          const lunchLateMinutes = summary?.lunchLateMinutes || 0;
-          const lunchPenaltyMinutes = summary?.lunchPenaltyMinutes || 0;
-          const lunchDeduction = summary?.lunchLatenessDeduction || 0;
-
-          // Get check-ins for this employee
-          const employeeCheckIns = checkInsData?.checkIns?.filter(
-            (ci: any) => ci.employerId === emp.id
-          ) || [];
-
-          const entrada = employeeCheckIns.find((ci: any) => ci.eventType === 'ENTRADA');
-          const salida = employeeCheckIns.find((ci: any) => ci.eventType === 'SALIDA');
-          const almuerzo = employeeCheckIns.find((ci: any) => ci.eventType === 'ALMUERZO');
-
-          const formatTime = (timestamp: string) => {
-            return new Date(timestamp).toLocaleTimeString('es-PY', {
-              hour: '2-digit',
-              minute: '2-digit',
-            });
-          };
-
-          return (
-            <View key={emp.id} style={styles.employeeRow}>
+        return (
+          <View key={emp.id} style={styles.employeeSection}>
+            {/* Employee Header */}
+            <View style={styles.employeeHeader}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{emp.firstName?.charAt(0)}</Text>
               </View>
               <View style={styles.employeeMainInfo}>
                 <Text style={styles.employeeName}>{emp.firstName}</Text>
                 <Text style={styles.employeeSalary}>
-                  ₲{(emp.salaryConfig?.baseSalaryPYG || 0).toLocaleString()}
+                  Salario Base: ₲{baseSalary.toLocaleString()}
                 </Text>
               </View>
-
-              {/* Check-in times */}
-              <View style={styles.checkInTimes}>
-                {entrada && (
-                  <View style={styles.timeEntry}>
-                    <Text style={styles.timeLabel}>Entrada:</Text>
-                    <Text style={styles.timeValue}>{formatTime(entrada.timestamp)}</Text>
-                  </View>
-                )}
-                {almuerzo && (
-                  <View style={styles.timeEntry}>
-                    <Text style={styles.timeLabel}>Almuerzo:</Text>
-                    <Text style={styles.timeValue}>{formatTime(almuerzo.timestamp)}</Text>
-                  </View>
-                )}
-                {salida && (
-                  <View style={styles.timeEntry}>
-                    <Text style={styles.timeLabel}>Salida:</Text>
-                    <Text style={styles.timeValue}>{formatTime(salida.timestamp)}</Text>
-                  </View>
-                )}
-                {!entrada && !salida && !almuerzo && (
-                  <Text style={styles.noCheckIn}>Sin registros</Text>
-                )}
-              </View>
-
-              {/* Deduction info */}
-              <View style={styles.deductionInfo}>
-                {lunchLateMinutes > 0 && (
-                  <Text style={styles.latenessText}>
-                    Atraso almuerzo: {lunchLateMinutes} min
-                  </Text>
-                )}
-                {lunchDeduction > 0 && (
-                  <Text style={styles.deductionText}>
-                    Descuento: ₲{lunchDeduction.toLocaleString()}
-                  </Text>
-                )}
-              </View>
             </View>
-          );
-        })}
-      </View>
-    </View>
+
+            {/* Daily Records */}
+            <View style={styles.recordsContainer}>
+              {dates.length === 0 ? (
+                <Text style={styles.noRecords}>No hay registros este mes</Text>
+              ) : (
+                dates.map((date) => {
+                  const dayCheckIns = groupedCheckIns[date];
+                  const entrada = dayCheckIns.find((ci: any) => ci.eventType === 'ENTRADA');
+                  const salida = dayCheckIns.find((ci: any) => ci.eventType === 'SALIDA');
+                  const almuerzo = dayCheckIns.find((ci: any) => ci.eventType === 'ALMUERZO');
+                  const returnFromLunch = dayCheckIns.find((ci: any) => ci.eventType === 'RETURN');
+
+                  // Calculate lunch lateness (example: 1 hour lunch break, tolerance 15 min)
+                  let lunchLateMinutes = 0;
+                  let lunchDeduction = 0;
+
+                  if (almuerzo && returnFromLunch) {
+                    const lunchStart = new Date(almuerzo.timestamp);
+                    const lunchEnd = new Date(returnFromLunch.timestamp);
+                    const lunchDuration = (lunchEnd.getTime() - lunchStart.getTime()) / (1000 * 60);
+                    const tolerance = 15; // 15 minutes tolerance
+                    const expectedLunch = 60; // 60 minutes expected
+
+                    if (lunchDuration > expectedLunch + tolerance) {
+                      lunchLateMinutes = Math.floor(lunchDuration - expectedLunch - tolerance);
+                      // Calculate deduction: (baseSalary / 22 days / 8 hours / 60 min) * late minutes
+                      const perMinuteRate = baseSalary / 22 / 8 / 60;
+                      lunchDeduction = Math.floor(perMinuteRate * lunchLateMinutes);
+                    }
+                  }
+
+                  const finalSalary = calculateSalary(baseSalary, lunchDeduction);
+
+                  return (
+                    <View key={date} style={styles.dayRecord}>
+                      {/* Date Header */}
+                      <Text style={styles.dateLabel}>{formatDate(date)}</Text>
+
+                      {/* Check-in times */}
+                      <View style={styles.checkInTimesGrid}>
+                        <View style={styles.timeBox}>
+                          <Text style={styles.timeLabel}>Entrada</Text>
+                          <Text style={entrada ? styles.timeValue : styles.timeValueEmpty}>
+                            {entrada ? formatTime(entrada.timestamp) : '--:--'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.timeBox}>
+                          <Text style={styles.timeLabel}>Almuerzo</Text>
+                          <Text style={almuerzo ? styles.timeValue : styles.timeValueEmpty}>
+                            {almuerzo ? formatTime(almuerzo.timestamp) : '--:--'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.timeBox}>
+                          <Text style={styles.timeLabel}>Regreso</Text>
+                          <Text style={returnFromLunch ? styles.timeValue : styles.timeValueEmpty}>
+                            {returnFromLunch ? formatTime(returnFromLunch.timestamp) : '--:--'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.timeBox}>
+                          <Text style={styles.timeLabel}>Salida</Text>
+                          <Text style={salida ? styles.timeValue : styles.timeValueEmpty}>
+                            {salida ? formatTime(salida.timestamp) : '--:--'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Deduction and Salary Info */}
+                      <View style={styles.deductionInfo}>
+                        {(lunchLateMinutes > 0 || lunchDeduction > 0) && (
+                          <View style={styles.deductionRow}>
+                            {lunchLateMinutes > 0 && (
+                              <Text style={styles.latenessText}>
+                                Atraso: {lunchLateMinutes} min
+                              </Text>
+                            )}
+                            {lunchDeduction > 0 && (
+                              <Text style={styles.deductionText}>
+                                Descuento: -₲{lunchDeduction.toLocaleString()}
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                        <Text style={styles.finalSalaryText}>
+                          Salario: ₲{finalSalary.toLocaleString()}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
+        );
+      })}
+    </ScrollView>
   );
 };
 
@@ -133,29 +207,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  listCard: {
+  employeeSection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
   },
-  employeeRow: {
+  employeeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#6366F1',
     alignItems: 'center',
     justifyContent: 'center',
@@ -163,73 +239,108 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontFamily: 'Montserrat, sans-serif',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  employeeInfo: {
-    flex: 1,
-  },
   employeeMainInfo: {
-    flex: 0.3,
-    minWidth: 150,
+    flex: 1,
   },
   employeeName: {
     fontFamily: 'Montserrat, sans-serif',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   employeeSalary: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  checkInTimes: {
-    flex: 0.4,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    paddingHorizontal: 12,
-  },
-  timeEntry: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  timeLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
+  },
+  recordsContainer: {
+    gap: 12,
+  },
+  noRecords: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 14,
+    paddingVertical: 20,
+  },
+  dayRecord: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6366F1',
+  },
+  dateLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginBottom: 10,
+    textTransform: 'capitalize',
+  },
+  checkInTimesGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  timeBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    minWidth: 75,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  timeLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   timeValue: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1F2937',
   },
-  noCheckIn: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
+  timeValueEmpty: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#D1D5DB',
   },
   deductionInfo: {
-    flex: 0.2,
-    alignItems: 'flex-end',
-    paddingLeft: 12,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  deductionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   latenessText: {
     fontSize: 11,
-    color: '#F59E0B', // Orange for lateness
-    marginBottom: 2,
-  },
-  penaltyText: {
-    fontSize: 11,
-    color: '#EF4444', // Red for penalty
-    marginBottom: 2,
+    fontWeight: '600',
+    color: '#F59E0B',
   },
   deductionText: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  finalSalaryText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#DC2626', // Darker red for deduction amount
+    color: '#10B981', // Green for final salary
+    marginTop: 4,
   },
 });
