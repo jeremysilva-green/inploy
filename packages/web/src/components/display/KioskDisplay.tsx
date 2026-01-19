@@ -14,6 +14,10 @@ export const KioskDisplay: React.FC = () => {
   const queryClient = useQueryClient();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
+  const [unlockClicks, setUnlockClicks] = useState(0);
 
   // Update time every second
   React.useEffect(() => {
@@ -22,6 +26,123 @@ export const KioskDisplay: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Monitor fullscreen changes
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+
+      // If exiting fullscreen while locked, re-enter fullscreen
+      if (!isCurrentlyFullscreen && isLocked) {
+        setTimeout(() => {
+          enterFullscreen();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, [isLocked]);
+
+  // Prevent accidental exits when locked
+  React.useEffect(() => {
+    if (isLocked) {
+      const preventEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' || e.key === 'F11') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      document.addEventListener('keydown', preventEscape, true);
+      return () => {
+        document.removeEventListener('keydown', preventEscape, true);
+      };
+    }
+  }, [isLocked]);
+
+  const enterFullscreen = () => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if ((elem as any).webkitRequestFullscreen) {
+      (elem as any).webkitRequestFullscreen();
+    } else if ((elem as any).mozRequestFullScreen) {
+      (elem as any).mozRequestFullScreen();
+    } else if ((elem as any).msRequestFullscreen) {
+      (elem as any).msRequestFullscreen();
+    }
+  };
+
+  const exitFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen();
+    } else if ((document as any).mozCancelFullScreen) {
+      (document as any).mozCancelFullScreen();
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen();
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      if (isLocked) {
+        // Show unlock prompt
+        setShowUnlockPrompt(true);
+      } else {
+        exitFullscreen();
+      }
+    } else {
+      enterFullscreen();
+    }
+  };
+
+  const toggleLock = () => {
+    if (isLocked) {
+      // Unlock requires confirmation
+      setShowUnlockPrompt(true);
+    } else {
+      // Lock immediately
+      setIsLocked(true);
+      if (!isFullscreen) {
+        enterFullscreen();
+      }
+    }
+  };
+
+  const handleUnlockClick = () => {
+    const newClicks = unlockClicks + 1;
+    setUnlockClicks(newClicks);
+
+    if (newClicks >= 5) {
+      // Unlock after 5 clicks
+      setIsLocked(false);
+      setShowUnlockPrompt(false);
+      setUnlockClicks(0);
+    }
+  };
+
+  const cancelUnlock = () => {
+    setShowUnlockPrompt(false);
+    setUnlockClicks(0);
+  };
 
   // Clear success message after 3 seconds
   React.useEffect(() => {
@@ -123,6 +244,55 @@ export const KioskDisplay: React.FC = () => {
           <Text style={styles.messageText}>{successMessage}</Text>
         </View>
       )}
+
+      {/* Unlock Prompt Modal */}
+      {showUnlockPrompt && (
+        <View style={styles.unlockModal}>
+          <View style={styles.unlockContent}>
+            <Text style={styles.unlockTitle}>Desbloquear Modo Kiosco</Text>
+            <Text style={styles.unlockInstructions}>
+              Haga clic {5 - unlockClicks} {5 - unlockClicks === 1 ? 'vez' : 'veces'} más para desbloquear
+            </Text>
+            <TouchableOpacity
+              style={styles.unlockButton}
+              onPress={handleUnlockClick}
+            >
+              <Text style={styles.unlockButtonText}>
+                Desbloquear ({unlockClicks}/5)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={cancelUnlock}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Fullscreen Controls */}
+      <View style={styles.fullscreenControls}>
+        <TouchableOpacity
+          style={[styles.controlButton, isFullscreen && styles.controlButtonActive]}
+          onPress={toggleFullscreen}
+        >
+          <Text style={styles.controlButtonText}>
+            {isFullscreen ? '⛶ Salir Pantalla Completa' : '⛶ Pantalla Completa'}
+          </Text>
+        </TouchableOpacity>
+
+        {isFullscreen && (
+          <TouchableOpacity
+            style={[styles.controlButton, styles.lockButton, isLocked && styles.lockButtonActive]}
+            onPress={toggleLock}
+          >
+            <Text style={styles.controlButtonText}>
+              {isLocked ? '🔒 Bloqueado' : '🔓 Bloquear'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Header with Clock */}
       <View style={styles.header}>
@@ -439,6 +609,102 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     color: theme.colors.gray600,
+    textAlign: 'center',
+  },
+  // Fullscreen controls
+  fullscreenControls: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 8,
+    zIndex: 100,
+  },
+  controlButton: {
+    backgroundColor: 'rgba(99, 102, 241, 0.9)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    ...theme.shadows.md,
+  },
+  controlButtonActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.9)',
+  },
+  controlButtonText: {
+    fontFamily: theme.fonts.heading,
+    fontSize: 12,
+    fontWeight: theme.fontWeight.bold as any,
+    color: '#FFFFFF',
+  },
+  lockButton: {
+    backgroundColor: 'rgba(245, 158, 11, 0.9)',
+  },
+  lockButtonActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+  },
+  // Unlock modal
+  unlockModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  unlockContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    minWidth: 320,
+    alignItems: 'center',
+    ...theme.shadows.lg,
+  },
+  unlockTitle: {
+    fontFamily: theme.fonts.heading,
+    fontSize: 24,
+    fontWeight: theme.fontWeight.bold as any,
+    color: theme.colors.gray900,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  unlockInstructions: {
+    fontFamily: theme.fonts.body,
+    fontSize: 16,
+    color: theme.colors.gray600,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  unlockButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    marginBottom: 12,
+    minWidth: 200,
+    ...theme.shadows.md,
+  },
+  unlockButtonText: {
+    fontFamily: theme.fonts.heading,
+    fontSize: 18,
+    fontWeight: theme.fontWeight.bold as any,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.gray300,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    minWidth: 200,
+  },
+  cancelButtonText: {
+    fontFamily: theme.fonts.heading,
+    fontSize: 16,
+    fontWeight: theme.fontWeight.semibold as any,
+    color: theme.colors.gray700,
     textAlign: 'center',
   },
 });
