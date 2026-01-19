@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { theme } from '../../styles/theme';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../services/api';
@@ -300,14 +300,6 @@ export const KioskDisplay: React.FC = () => {
           <Text style={styles.time}>{formatTime(currentTime)}</Text>
           <Text style={styles.date}>{formatDate(currentTime)}</Text>
         </View>
-        <View style={styles.logoSection}>
-          <Image
-            source={require('../../../assets/logo.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.subtitle}>Sistema de Control de Asistencia</Text>
-        </View>
       </View>
 
       {/* Employee List */}
@@ -471,32 +463,16 @@ const styles = StyleSheet.create({
   },
   time: {
     fontFamily: theme.fonts.heading,
-    fontSize: 48,
-    fontWeight: theme.fontWeight.extrabold as any,
+    fontSize: 18,
+    fontWeight: theme.fontWeight.bold as any,
     color: theme.colors.gray900,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
   date: {
     fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.lg,
+    fontSize: 14,
     color: theme.colors.gray600,
     textTransform: 'capitalize',
-  },
-  logoSection: {
-    alignItems: 'flex-end',
-  },
-  logoImage: {
-    width: 200,
-    height: 60,
-    marginBottom: theme.spacing.xs,
-    backgroundColor: '#FFFFFF',
-    padding: 8,
-    borderRadius: 8,
-  },
-  subtitle: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.gray600,
   },
   employeeList: {
     flex: 1,
